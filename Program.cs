@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -17,6 +18,11 @@ namespace BinanceAlarm
         {
             using var client = new HttpClient();
 
+            CultureInfo info = new CultureInfo("tr-TR");
+            info.NumberFormat.NumberDecimalSeparator = ".";
+            Thread.CurrentThread.CurrentCulture = info;
+            Thread.CurrentThread.CurrentUICulture = Thread.CurrentThread.CurrentCulture;
+
             while (true)
             {
                 Console.WriteLine($"Binance verileri kontrol ediliyor. {DateTime.Now}");
@@ -31,20 +37,23 @@ namespace BinanceAlarm
                 string path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"rules.txt");
                 var lines = File.ReadAllLines(path);
 
-                foreach(var line in lines)
+                foreach (var line in lines)
                 {
                     var lineArray = line.Split(" ");
                     var symbol = lineArray[0];
                     var rule = lineArray[1];
-                    var price = Convert.ToDecimal(lineArray[2]);
+                    var price = double.Parse(lineArray[2].Replace(",", ""), info);
 
-                    var marketData = marketDataList.FirstOrDefault(x=>x.symbol == symbol);
+                    var marketData = marketDataList.FirstOrDefault(x => x.symbol == symbol);
 
-                    if(marketData != null)
+                    if (marketData != null)
                     {
+                        var marketPrice = double.Parse(marketData.price, info);
+
                         if (rule == ">")
                         {
-                            if (decimal.Parse(marketData.price) >= price)
+
+                            if (marketPrice >= price)
                             {
                                 PlayAlarm();
 
@@ -55,7 +64,7 @@ namespace BinanceAlarm
                         }
                         else
                         {
-                            if (decimal.Parse(marketData.price) <= price)
+                            if (marketPrice <= price)
                             {
                                 PlayAlarm();
 
@@ -67,7 +76,7 @@ namespace BinanceAlarm
                     }
                 }
 
-                if(!anyRuleDone)
+                if (!anyRuleDone)
                 {
                     Console.WriteLine($"Gerçekleşen koşul yok. {DateTime.Now}");
                     Console.WriteLine($"-----------------------------------------------------------");
